@@ -1,0 +1,12 @@
+{
+  "name": "task-manager",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --cwd packages/server dev & bun run --cwd packages/client dev",
+    "build": "bun run --cwd packages/server build && bun run --cwd packages/client build",
+    "start": "bun run --cwd packages/server start"
+  }
+}
