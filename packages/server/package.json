@@ -18,6 +18,13 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.36.4",
     "hono": "^4.6.12",
+    "postgres": "^3.4.5",
     "zod": "^3.23.8"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate:pg",
+    "migrate": "bun run src/db/migrate.ts",
+    "studio": "drizzle-kit studio",
+    "dev": "vite"
   }
 }
