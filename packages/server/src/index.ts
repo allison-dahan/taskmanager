@@ -1,47 +1,45 @@
 import { Hono } from 'hono';
-import { serve } from '@hono/node-server';
-import { logger } from 'hono/logger';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { cors } from 'hono/cors';
 import taskRouter from './routes/tasks';
 
-// Define custom error type
-interface HTTPResponseError extends Error {
-  status: number;
-}
+const app = new Hono();
 
-// Define your app environment
-type AppEnvironment = {
-  Variables: {
-    userId: string;
-  };
-};
+// CORS Middleware
+app.use('*', cors({
+  origin: ['http://localhost:5173'], // Allow frontend origin
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Authorization', 'Content-Type'],
+}));
 
-const app = new Hono<AppEnvironment>();
+// Clerk Middleware: Protect All Routes
+app.use('*', clerkMiddleware({
+  secretKey: process.env.CLERK_SECRET_KEY,
+  publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+}));
 
-// Middleware
-app.use('*', logger());
-app.use('*', cors());
-
-// Error handling middleware
-app.onError((err, c) => {
-  const error = err as HTTPResponseError;
-  return c.json({
-    error: error.message,
-    status: error.status || 500
-  }, error.status || 500);
+app.use('*', async (c, next) => {
+  const auth = getAuth(c);
+  if (!auth?.userId) {
+    return c.json({
+      message: 'You are not logged in.'
+    }, 401);
+  }
+  // Set userId in the context
+  c.set('userId', auth.userId);
+  await next();
 });
 
-// Routes
+
+
+
+
+// Protected API Routes
 app.route('/api/tasks', taskRouter);
 
-// Health check
-app.get('/', (c) => c.json({ status: 'ok' }));
-
-// Start server
-const port = process.env.PORT || 3000;
-serve({
+// Export for Bun
+export default {
+  port: parseInt(process.env.PORT || '3000', 10),
   fetch: app.fetch,
-  port: Number(port)
-}, (info) => {
-  console.log(`Server running at http://localhost:${info.port}`);
-});
+};

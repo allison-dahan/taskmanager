@@ -1,15 +1,24 @@
-// client/src/components/TaskList.tsx
-import { useUser } from '@clerk/clerk-react'
+// src/components/TaskList.tsx
+import { useAuth, SignIn } from '@clerk/clerk-react'
+import { CreateTaskForm } from './CreateTaskForm'
 
-const TaskList = () => {
-  const { user } = useUser()
+export default function TaskList() {
+  const { isSignedIn, isLoaded } = useAuth()
+
+  // Show loading while Clerk initializes
+  if (!isLoaded) {
+    return <div>Loading...</div>
+  }
+
+  // Show sign-in if not authenticated
+  if (!isSignedIn) {
+    return <SignIn />
+  }
 
   return (
-    <div>
-      <h1>Tasks for {user?.firstName}</h1>
-      {/* Add your task list implementation */}
+    <div className="max-w-4xl mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Tasks</h1>
+      <CreateTaskForm />
     </div>
   )
 }
-
-export default TaskList

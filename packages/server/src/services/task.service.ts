@@ -22,14 +22,45 @@ export class TaskService {
     return task;
   }
 
-  async createTask(taskData: NewTask): Promise<Task> {
-    // Add any business logic validation here
-    if (!taskData.title.trim()) {
-      throw new HTTPException(400, { message: 'Task title is required' });
-    }
+// packages/server/src/services/task.service.ts
+async createTask(taskData: NewTask): Promise<Task> {
+  console.log('TaskService.createTask called with:', taskData);
 
-    return this.taskRepository.create(taskData);
+  // Validate required fields
+  if (!taskData.title?.trim()) {
+    console.log('Task creation failed: Missing title');
+    throw new HTTPException(400, { message: 'Task title is required' });
   }
+
+  if (!taskData.userId) {
+    console.log('Task creation failed: Missing userId');
+    throw new HTTPException(400, { message: 'User ID is required' });
+  }
+
+  try {
+    // Handle optional fields and type conversion
+    const validatedTaskData: NewTask = {
+      title: taskData.title.trim(),
+      description: taskData.description?.trim() || '',
+      status: taskData.status || 'pending',
+      userId: taskData.userId,
+      // Safely handle optional dueDate
+      ...(taskData.dueDate ? { 
+        dueDate: taskData.dueDate instanceof Date 
+          ? taskData.dueDate 
+          : new Date(taskData.dueDate) 
+      } : {})
+    };
+
+    console.log('Creating task with validated data:', validatedTaskData);
+    const createdTask = await this.taskRepository.create(validatedTaskData);
+    console.log('Task created successfully:', createdTask);
+    return createdTask;
+  } catch (error) {
+    console.error('Repository error creating task:', error);
+    throw new HTTPException(500, { message: 'Failed to create task' });
+  }
+}
 
   async updateTask(id: number, userId: string, taskData: Partial<NewTask>): Promise<Task> {
     const existingTask = await this.taskRepository.findById(userId, id);

@@ -1,8 +1,8 @@
+//packages/server/src/routes/tasks.ts
 import { Hono } from 'hono';
 import { TaskService } from '../services/task.service';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { authMiddleware } from '../middleware/auth.ts';
 
 // Define your environment and types
 type TaskEnv = {
@@ -25,8 +25,6 @@ const updateTaskSchema = createTaskSchema.partial();
 const taskRouter = new Hono<TaskEnv>();
 const taskService = new TaskService();
 
-// Apply auth middleware to all routes
-taskRouter.use('*', authMiddleware);
 
 // Routes
 taskRouter.get('/', async (c) => {
