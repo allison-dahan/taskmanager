@@ -7,6 +7,7 @@ import { Route as rootRoute } from './routes/__root';
 // import { Route as HomeRouteImport } from './routes/index';
 import { Route as CreateTaskRouteImport } from './routes/create-task';
 import {Route as ViewAllTasksImport} from "./routes/tasks";
+import {Route as TaskDetailsImport} from "./routes/tasks.$taskId"
 // Add more route imports as needed
 
 // Create/Update Routes
@@ -25,6 +26,11 @@ const ViewAllTasksRoute = ViewAllTasksImport.update({
   getParentRoute: () => rootRoute,
 } as any);
 
+const TaskDetailsRoute = TaskDetailsImport.update({
+  path: '/tasks/$taskId',
+  getParentRoute: () => rootRoute,
+} as any);
+
 
 // Populate the FileRoutesByPath interface
 declare module '@tanstack/react-router' {
@@ -40,6 +46,10 @@ declare module '@tanstack/react-router' {
     '/tasks': {
       preLoaderRoute: typeof ViewAllTasksImport;
       parentRoute: typeof rootRoute;
+    };
+    '/tasks/$taskId': {
+      preLoaderRoute: typeof TaskDetailsImport;
+      parentRoute: typeof rootRoute;
     }
     // Add more routes to the interface as needed
   }
@@ -49,7 +59,8 @@ declare module '@tanstack/react-router' {
 export const routeTree = rootRoute.addChildren([
   // HomeRoute,
   CreateTaskRoute,
-  ViewAllTasksRoute
+  ViewAllTasksRoute,
+  TaskDetailsRoute
   
 ]);
 

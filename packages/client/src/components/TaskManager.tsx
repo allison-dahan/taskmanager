@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
-import Task from './Task';
-import { Task as TaskType, TaskUpdate } from './types';
 
-
+import { Task as TaskType } from './types';
+import { Link } from '@tanstack/react-router';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const TaskManager: React.FC = () => {
   const [tasks, setTasks] = useState<TaskType[]>([]);
@@ -39,16 +39,27 @@ const TaskManager: React.FC = () => {
     fetchTasks();
   }, []);
 
+  const handleDragEnd = async (result: any) => {
+    const { source, destination } = result;
 
-  const handleUpdateTask = async (taskId: number, updates: TaskUpdate): Promise<void> => {
+    // Dropped outside a valid droppable
+    if (!destination) return;
+
+    // Get the task being dragged
+    const taskList = source.droppableId === 'pending' ? pendingTasks : completedTasks;
+    const [movedTask] = taskList.splice(source.index, 1);
+    
+    // Update task status based on destination
+    const newStatus = destination.droppableId === 'pending' ? 'pending' : 'completed';
+    
     try {
-      const response = await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
+      const response = await fetch(`http://localhost:3000/api/tasks/${movedTask.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(updates),
+        body: JSON.stringify({ status: newStatus }),
       });
 
       if (!response.ok) {
@@ -57,34 +68,15 @@ const TaskManager: React.FC = () => {
 
       const updatedTask = await response.json();
       setTasks(tasks.map(task => 
-        task.id === taskId ? updatedTask : task
+        task.id === updatedTask.id ? updatedTask : task
       ));
     } catch (err) {
-      setError('Failed to update task. Please try again.');
+      setError('Failed to update task status. Please try again.');
       console.error('Error updating task:', err);
-      throw err;
     }
   };
 
-  const handleDeleteTask = async (taskId: number): Promise<void> => {
-    try {
-      const response = await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete task');
-      }
-
-      setTasks(tasks.filter(task => task.id !== taskId));
-    } catch (err) {
-      setError('Failed to delete task. Please try again.');
-      console.error('Error deleting task:', err);
-      throw err;
-    }
-  };
-if (loading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -105,46 +97,89 @@ if (loading) {
             </Alert>
           )}
           
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Pending Tasks ({pendingTasks.length})</h2>
-            <div className="space-y-2">
-              {pendingTasks.map((task) => (
-                <Task 
-                  key={task.id} 
-                  task={task}
-                  onUpdate={handleUpdateTask}
-                  onDelete={handleDeleteTask}
-                />
-              ))}
-              {pendingTasks.length === 0 && (
-                <div className="text-center py-4 text-gray-500">
-                  No pending tasks. Great job!
-                </div>
-              )}
-            </div>
-          </div>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Pending Tasks ({pendingTasks.length})</h2>
+                <Droppable droppableId="pending">
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className="space-y-2 min-h-[200px] bg-gray-50 p-4 rounded-lg"
+                    >
+                      {pendingTasks.map((task, index) => (
+                        <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+                          {(provided, snapshot) => (
+                            <Link
+                              to="/tasks/$taskId"
+                              params={{ taskId: task.id.toString() }}
+                              className={`block p-4 bg-white rounded-lg shadow-sm 
+                                ${snapshot.isDragging ? 'shadow-lg' : ''} 
+                                hover:shadow cursor-pointer`}
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              {task.title}
+                            </Link>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {pendingTasks.length === 0 && (
+                        <div className="text-center py-4 text-gray-500">
+                          No pending tasks
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
 
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Completed Tasks ({completedTasks.length})</h2>
-            <div className="space-y-2">
-              {completedTasks.map((task) => (
-                <Task 
-                  key={task.id} 
-                  task={task}
-                  onUpdate={handleUpdateTask}
-                  onDelete={handleDeleteTask}
-                />
-              ))}
-              {completedTasks.length === 0 && (
-                <div className="text-center py-4 text-gray-500">
-                  No completed tasks yet.
-                </div>
-              )}
+              <div>
+                <h2 className="text-lg font-semibold mb-2">Completed Tasks ({completedTasks.length})</h2>
+                <Droppable droppableId="completed">
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className="space-y-2 min-h-[200px] bg-gray-50 p-4 rounded-lg"
+                    >
+                      {completedTasks.map((task, index) => (
+                        <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+                          {(provided, snapshot) => (
+                            <Link
+                              to="/tasks/$taskId"
+                              params={{ taskId: task.id.toString() }}
+                              className={`block p-4 bg-white rounded-lg shadow-sm 
+                                ${snapshot.isDragging ? 'shadow-lg' : ''} 
+                                hover:shadow cursor-pointer`}
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              {task.title}
+                            </Link>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {completedTasks.length === 0 && (
+                        <div className="text-center py-4 text-gray-500">
+                          No completed tasks
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
             </div>
-          </div>
+          </DragDropContext>
         </CardContent>
       </Card>
     </div>
   );
 };
+
 export default TaskManager;
