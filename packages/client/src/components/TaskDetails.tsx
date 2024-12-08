@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, PencilIcon, Trash, X, Calendar } from 'lucide-react';
-import { Task } from './types';
+import { Task, TaskUpdate } from './types';
 
 interface TaskDetailsProps {
   taskId: number;
@@ -56,23 +56,34 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ taskId }) => {
 
   const handleUpdate = async () => {
     try {
+      const updateData: TaskUpdate = {
+        title: editForm.title.trim() || undefined,
+        description: editForm.description.trim() || undefined,
+        status: editForm.status,
+        // Convert string date from form to Date object
+        dueDate: editForm.dueDate ? new Date(editForm.dueDate) : undefined
+      };
+  
       const response = await fetch(`http://localhost:3000/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(updateData),
       });
-
-      if (!response.ok) throw new Error('Failed to update task');
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update task');
+      }
       
       const updatedTask = await response.json();
       setTask(updatedTask);
       setIsEditing(false);
       setError(null);
     } catch (err) {
-      setError('Failed to update task. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to update task');
       console.error('Error updating task:', err);
     }
   };

@@ -41,18 +41,26 @@ const TaskManager: React.FC = () => {
 
   const handleDragEnd = async (result: any) => {
     const { source, destination } = result;
-
+  
     // Dropped outside a valid droppable
     if (!destination) return;
-
+  
     // Get the task being dragged
-    const taskList = source.droppableId === 'pending' ? pendingTasks : completedTasks;
-    const [movedTask] = taskList.splice(source.index, 1);
+    const sourceList = source.droppableId === 'pending' ? pendingTasks : completedTasks;
+    const movedTask = sourceList[source.index];
     
     // Update task status based on destination
-    const newStatus = destination.droppableId === 'pending' ? 'pending' : 'completed';
+    const newStatus: 'pending' | 'completed' = destination.droppableId === 'pending' ? 'pending' : 'completed';
     
     try {
+      // Optimistically update UI first
+      const updatedTasks = tasks.map(task => 
+        task.id === movedTask.id 
+          ? { ...task, status: newStatus }
+          : task
+      );
+      setTasks(updatedTasks);
+  
       const response = await fetch(`http://localhost:3000/api/tasks/${movedTask.id}`, {
         method: 'PATCH',
         headers: {
@@ -61,21 +69,23 @@ const TaskManager: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to update task');
       }
-
+  
       const updatedTask = await response.json();
-      setTasks(tasks.map(task => 
-        task.id === updatedTask.id ? updatedTask : task
-      ));
+      // Update with server response to ensure consistency
+      setTasks(prev => prev.map(task => 
+      task.id === updatedTask.id ? updatedTask : task
+    ));
     } catch (err) {
+      // Revert to original state if update fails
       setError('Failed to update task status. Please try again.');
       console.error('Error updating task:', err);
+      await fetchTasks(); // Refresh tasks from server
     }
   };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
