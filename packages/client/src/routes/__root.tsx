@@ -10,8 +10,8 @@ export const Route = createRootRoute({
       <h1>My App</h1>
       <ul>
         <li>
-          <Link to="/" activeProps={activeProps}>
-            Home
+          <Link to="/tasks" activeProps={activeProps}>
+            My Tasks
           </Link>
         </li>
         <li>
