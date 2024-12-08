@@ -8,6 +8,7 @@ import { Route as rootRoute } from './routes/__root';
 import { Route as CreateTaskRouteImport } from './routes/create-task';
 import {Route as ViewAllTasksImport} from "./routes/tasks";
 import {Route as TaskDetailsImport} from "./routes/tasks.$taskId"
+import { Route as SignOutRouteImport } from "./routes/sign-out";
 // Add more route imports as needed
 
 // Create/Update Routes
@@ -31,6 +32,11 @@ const TaskDetailsRoute = TaskDetailsImport.update({
   getParentRoute: () => rootRoute,
 } as any);
 
+const SignOutRoute = SignOutRouteImport.update({
+  path: '/sign-out',
+  getParentRoute: () => rootRoute,
+} as any);
+
 
 // Populate the FileRoutesByPath interface
 declare module '@tanstack/react-router' {
@@ -50,6 +56,10 @@ declare module '@tanstack/react-router' {
     '/tasks/$taskId': {
       preLoaderRoute: typeof TaskDetailsImport;
       parentRoute: typeof rootRoute;
+    };
+    '/sign-out': {  // Add this interface
+      preLoaderRoute: typeof SignOutRouteImport;
+      parentRoute: typeof rootRoute;
     }
     // Add more routes to the interface as needed
   }
@@ -60,7 +70,8 @@ export const routeTree = rootRoute.addChildren([
   // HomeRoute,
   CreateTaskRoute,
   ViewAllTasksRoute,
-  TaskDetailsRoute
+  TaskDetailsRoute,
+  SignOutRoute
   
 ]);
 

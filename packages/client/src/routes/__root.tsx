@@ -15,13 +15,13 @@ export const Route = createRootRoute({
           </Link>
         </li>
         <li>
-          <Link to="/profile" activeProps={activeProps}>
-            {({ isActive }) => <>Profile {isActive && "~"}</>}
+          <Link to="/create-task" activeProps={activeProps}>
+            Create Task
           </Link>
         </li>
         <li>
-          <Link to="/create-task" activeProps={activeProps}>
-            Create Task
+          <Link to="/sign-out" activeProps={activeProps}>
+            Sign out
           </Link>
         </li>
       </ul>
