@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useAuth } from '@clerk/clerk-react';
-import { createTask } from '../api/tasks';
 import { z } from 'zod';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
@@ -10,6 +9,8 @@ import { Calendar } from './ui/calendar';
 import { Textarea } from './ui/textarea';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { format } from 'date-fns';
+import { useCreateTask } from '../hooks/useTasks';
+import { useNavigate } from '@tanstack/react-router';
 
 // Define schema with Zod
 const taskSchema = z.object({
@@ -21,28 +22,28 @@ const taskSchema = z.object({
 type TaskFormValues = z.infer<typeof taskSchema>;
 
 const CreateTaskForm: React.FC = () => {
-  const { getToken, userId } = useAuth();
+  const { userId } = useAuth();
+  const createTaskMutation = useCreateTask();
+  const navigate = useNavigate();
+  
   const form = useForm<TaskFormValues>({
     defaultValues: { taskName: '', description: '', dueDate: undefined },
     onSubmit: async ({ value }) => {
-      
       if (!userId) {
         alert('User is not authenticated.');
         return;
       }
       
-      const token = await getToken() || '';
-      console.log("user id", userId);
-      
       try {
-        await createTask({
+        await createTaskMutation.mutateAsync({
           title: value.taskName,
           description: value.description,
           userId: userId,
           status: 'pending',
-          dueDate: value.dueDate ? new Date(value.dueDate) : undefined,
-        }, token);
-        alert('Task created successfully!');
+          dueDate: value.dueDate,
+        });
+        
+        navigate({ to: '/tasks' });
       } catch (error) {
         alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
@@ -51,17 +52,16 @@ const CreateTaskForm: React.FC = () => {
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
+
   return (
     <div className="max-w-md mx-auto bg-white border border-gray-200 rounded-lg shadow-md p-4">
-      {/* Card Header */}
       <div className="pb-4 border-b">
         <h1 className="text-xl font-bold">Create Task</h1>
       </div>
 
-      {/* Card Body */}
       <div className="py-4">
         <form
-          onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
+          onSubmit={(e) => {
             e.preventDefault();
             form.handleSubmit();
           }}
@@ -120,13 +120,16 @@ const CreateTaskForm: React.FC = () => {
               </PopoverContent>
             </Popover>
           </div>
-          <Button type="submit" className="w-full">
-            Create Task
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={createTaskMutation.isPending}
+          >
+            {createTaskMutation.isPending ? 'Creating...' : 'Create Task'}
           </Button>
         </form>
       </div>
 
-      {/* Card Footer */}
       <div className="pt-4 border-t">
         <p className="text-sm text-gray-500">Fill out all fields to create a new task.</p>
       </div>

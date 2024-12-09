@@ -2,6 +2,7 @@
 
 import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { RouterProvider } from '@tanstack/react-router';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { router } from './routeTree.gen'; // Import the router
 
@@ -17,6 +18,7 @@ function App() {
         <SignedOut>
           <RedirectToSignIn />
         </SignedOut>
+        <ReactQueryDevtools />
       </QueryClientProvider>
     </ClerkProvider>
   );

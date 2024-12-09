@@ -1,96 +1,66 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
-
-import { Task as TaskType } from './types';
 import { Link } from '@tanstack/react-router';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { useTasks, useUpdateTaskStatus } from '../hooks/useTasks';
+import { Task } from './types';
 
 const TaskManager: React.FC = () => {
-  const [tasks, setTasks] = useState<TaskType[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { 
+    data: tasks = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useTasks();
+  const updateTaskStatus = useUpdateTaskStatus();
 
-  const pendingTasks = tasks.filter(task => task.status === 'pending');
-  const completedTasks = tasks.filter(task => task.status === 'completed');
+  // Add console logs for debugging
+  console.log('Tasks loaded:', tasks);
+  console.log('Loading state:', isLoading);
+  console.log('Error state:', error);
 
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch('http://localhost:3000/api/tasks', {
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch tasks');
-      }
-      
-      const data = await response.json();
-      setTasks(data);
-    } catch (err) {
-      setError('Failed to load tasks. Please try again later.');
-      console.error('Error fetching tasks:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const pendingTasks = tasks.filter((task: Task) => task.status === 'pending');
+  const completedTasks = tasks.filter((task: Task) => task.status === 'completed');
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const handleDragEnd = async (result: any) => {
+  const handleDragEnd = async (result: DropResult) => {
     const { source, destination } = result;
-  
-    // Dropped outside a valid droppable
+    
     if (!destination) return;
   
-    // Get the task being dragged
     const sourceList = source.droppableId === 'pending' ? pendingTasks : completedTasks;
     const movedTask = sourceList[source.index];
-    
-    // Update task status based on destination
     const newStatus: 'pending' | 'completed' = destination.droppableId === 'pending' ? 'pending' : 'completed';
     
     try {
-      // Optimistically update UI first
-      const updatedTasks = tasks.map(task => 
-        task.id === movedTask.id 
-          ? { ...task, status: newStatus }
-          : task
-      );
-      setTasks(updatedTasks);
-  
-      const response = await fetch(`http://localhost:3000/api/tasks/${movedTask.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status: newStatus }),
+      // Call the mutation
+      await updateTaskStatus.mutateAsync({
+        taskId: movedTask.id,
+        status: newStatus
       });
-  
-      if (!response.ok) {
-        throw new Error('Failed to update task');
-      }
-  
-      const updatedTask = await response.json();
-      // Update with server response to ensure consistency
-      setTasks(prev => prev.map(task => 
-      task.id === updatedTask.id ? updatedTask : task
-    ));
     } catch (err) {
-      // Revert to original state if update fails
-      setError('Failed to update task status. Please try again.');
-      console.error('Error updating task:', err);
-      await fetchTasks(); // Refresh tasks from server
+      console.error('Error updating task status:', err);
+      // If the update fails, refetch to get the correct state
+      refetch();
     }
   };
-  if (loading) {
+
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="w-8 h-8 animate-spin" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          {error instanceof Error ? error.message : 'Failed to load tasks'}
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -101,16 +71,12 @@ const TaskManager: React.FC = () => {
           <CardTitle>Task Manager</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h2 className="text-lg font-semibold mb-2">Pending Tasks ({pendingTasks.length})</h2>
+                <h2 className="text-lg font-semibold mb-2">
+                  Pending Tasks ({pendingTasks.length})
+                </h2>
                 <Droppable droppableId="pending">
                   {(provided) => (
                     <div
@@ -118,15 +84,20 @@ const TaskManager: React.FC = () => {
                       {...provided.droppableProps}
                       className="space-y-2 min-h-[200px] bg-gray-50 p-4 rounded-lg"
                     >
-                      {pendingTasks.map((task, index) => (
-                        <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+                      {pendingTasks.map((task: Task, index: number) => (
+                        <Draggable 
+                          key={task.id} 
+                          draggableId={task.id.toString()} 
+                          index={index}
+                        >
                           {(provided, snapshot) => (
                             <Link
                               to="/tasks/$taskId"
                               params={{ taskId: task.id.toString() }}
                               className={`block p-4 bg-white rounded-lg shadow-sm 
                                 ${snapshot.isDragging ? 'shadow-lg' : ''} 
-                                hover:shadow cursor-pointer`}
+                                hover:shadow cursor-pointer
+                                ${updateTaskStatus.isPending ? 'opacity-50' : ''}`}
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
@@ -148,7 +119,9 @@ const TaskManager: React.FC = () => {
               </div>
 
               <div>
-                <h2 className="text-lg font-semibold mb-2">Completed Tasks ({completedTasks.length})</h2>
+                <h2 className="text-lg font-semibold mb-2">
+                  Completed Tasks ({completedTasks.length})
+                </h2>
                 <Droppable droppableId="completed">
                   {(provided) => (
                     <div
@@ -156,15 +129,20 @@ const TaskManager: React.FC = () => {
                       {...provided.droppableProps}
                       className="space-y-2 min-h-[200px] bg-gray-50 p-4 rounded-lg"
                     >
-                      {completedTasks.map((task, index) => (
-                        <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+                      {completedTasks.map((task: Task, index: number) => (
+                        <Draggable 
+                          key={task.id} 
+                          draggableId={task.id.toString()} 
+                          index={index}
+                        >
                           {(provided, snapshot) => (
                             <Link
                               to="/tasks/$taskId"
                               params={{ taskId: task.id.toString() }}
                               className={`block p-4 bg-white rounded-lg shadow-sm 
                                 ${snapshot.isDragging ? 'shadow-lg' : ''} 
-                                hover:shadow cursor-pointer`}
+                                hover:shadow cursor-pointer
+                                ${updateTaskStatus.isPending ? 'opacity-50' : ''}`}
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
