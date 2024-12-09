@@ -99,6 +99,7 @@ const CreateTaskForm: React.FC = () => {
               )}
             />
           </div>
+          
           <div>
             <Label htmlFor="dueDate">Due Date</Label>
             <Popover>
@@ -119,6 +120,19 @@ const CreateTaskForm: React.FC = () => {
                 />
               </PopoverContent>
             </Popover>
+
+            
+            <div>
+            <Label htmlFor="fileUpload">File Upload</Label>
+            <Input
+              id="fileUpload"
+              name="fileUpload"
+              type="file"
+              disabled
+              className="cursor-not-allowed"
+            />
+            <p className="text-sm text-gray-500">File upload is currently not functional.</p>
+          </div>
           </div>
           <Button 
             type="submit" 
