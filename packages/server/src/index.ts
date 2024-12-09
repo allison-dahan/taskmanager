@@ -6,12 +6,16 @@ import taskRouter from './routes/tasks';
 const app = new Hono();
 
 // CORS Middleware
-app.use('*', cors({
-  origin: ['http://localhost:5173'], // Allow frontend origin
-  credentials: true,
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Authorization', 'Content-Type'],
-}));
+app.use('*', 
+  cors({
+    origin: ['http://localhost:5173'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    exposeHeaders: ['Content-Length'],
+    maxAge: 600,
+  })
+);
 
 // Clerk Middleware: Protect All Routes
 app.use('*', clerkMiddleware({

@@ -28,11 +28,22 @@ const taskService = new TaskService();
 
 // Routes
 taskRouter.get('/', async (c) => {
-  const userId = c.get('userId');
-  const tasks = await taskService.getAllTasks(userId);
-  return c.json(tasks);
-});
+  try {
+    const userId = c.get('userId');
+    console.log('Fetching tasks for user:', userId); // Add logging
 
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const tasks = await taskService.getAllTasks(userId);
+    console.log('Tasks fetched:', tasks); // Add logging
+    return c.json(tasks);
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
 taskRouter.get('/:id', async (c) => {
   const userId = c.get('userId');
   const id = Number(c.req.param('id'));
@@ -46,13 +57,28 @@ taskRouter.get('/:id', async (c) => {
 });
 
 taskRouter.post('/', zValidator('json', createTaskSchema), async (c) => {
-  const userId = c.get('userId');
-  const taskData = await c.req.valid('json');
-  const task = await taskService.createTask({
-    ...taskData,
-    userId,
-  });
-  return c.json(task, 201);
+  try {
+    const userId = c.get('userId');
+    console.log('Creating task for user:', userId); // Add logging
+
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const taskData = await c.req.valid('json');
+    console.log('Task data received:', taskData); // Add logging
+
+    const task = await taskService.createTask({
+      ...taskData,
+      userId,
+    });
+    console.log('Task created:', task); // Add logging
+
+    return c.json(task, 201);
+  } catch (error) {
+    console.error('Error creating task:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
 });
 
 taskRouter.patch('/:id', zValidator('json', updateTaskSchema), async (c) => {
